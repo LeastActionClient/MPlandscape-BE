@@ -32,11 +32,13 @@ const serviceSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      required: [true, 'Service image URL is required'],
+      required: [true, 'Service image is required'],
+      trim: true,
     },
     imagePublicId: {
       type: String,
-      default: '',
+      default: null,
+      trim: true,
     },
     displayOrder: {
       type: Number,

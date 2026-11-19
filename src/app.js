@@ -6,8 +6,13 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import morgan from 'morgan';
 import mongoSanitize from 'express-mongo-sanitize';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import ENV from './config/env.js';
 import connectDB from './config/db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 // Route imports
@@ -78,6 +83,9 @@ export const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Serve local uploaded assets
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // 4. Request Body Limits & Utilities
 app.use(express.json({ limit: '2mb' }));
@@ -222,6 +230,12 @@ app.use((err, req, res, next) => {
   // Handle Custom File Filter Rejection
   if (err.code === 'INVALID_FILE_TYPE') {
     statusCode = 400;
+  }
+
+  // Handle Missing Multipart Boundary (busboy parsing error)
+  if (err.message && err.message.includes('Boundary not found')) {
+    statusCode = 400;
+    message = 'Invalid multipart request: multipart boundary not found.';
   }
 
   // Sanitize 500 Errors in Production: never expose stack traces or raw database queries to public users
