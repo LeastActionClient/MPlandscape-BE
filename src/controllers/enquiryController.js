@@ -274,6 +274,10 @@ export const exportEnquiriesCSV = async (req, res, next) => {
       filter.status = req.query.status.toUpperCase();
     }
 
+    if (req.query.serviceId && req.query.serviceId !== 'All') {
+      filter.serviceId = req.query.serviceId;
+    }
+
     if (req.query.startDate || req.query.endDate) {
       filter.createdAt = {};
       if (req.query.startDate) {
