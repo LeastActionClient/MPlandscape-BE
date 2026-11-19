@@ -18,7 +18,14 @@ export const serviceCreateSchema = z.object({
     }
     return val;
   }, z.array(z.string()).optional().default([])),
-  imageUrl: z.string().optional(),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine((val) => !val || /^https?:\/\/.+/i.test(val) || val.startsWith('/uploads/'), {
+      message: 'Invalid image URL format. Please provide a valid HTTP/HTTPS URL.',
+    })
+    .optional()
+    .nullable(),
   displayOrder: z.preprocess((val) => (val !== undefined ? Number(val) : 0), z.number().int()).default(0),
   isActive: z.preprocess((val) => (val === 'false' || val === false ? false : true), z.boolean()).default(true),
   seoTitle: z.string().trim().optional().default(''),

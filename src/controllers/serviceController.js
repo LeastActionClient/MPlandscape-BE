@@ -101,20 +101,54 @@ export const createService = async (req, res, next) => {
   try {
     const body = { ...req.body };
 
+    if (!body.title || !body.title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service title is required',
+      });
+    }
+
+    if (!body.description || !body.description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service description is required',
+      });
+    }
+
     // Process image: file upload takes precedence over raw imageUrl string
-    let imageUrl = body.imageUrl;
-    let imagePublicId = '';
+    // Service banner image is strictly MANDATORY
+    let imageUrl = null;
+    let imagePublicId = null;
 
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/services');
-      imageUrl = uploadResult.secure_url;
-      imagePublicId = uploadResult.public_id;
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/services');
+        imageUrl = uploadResult.secure_url;
+        imagePublicId = uploadResult.public_id;
+      } catch (uploadError) {
+        console.error('❌ Service banner upload error:', uploadError.message || uploadError);
+        return res.status(uploadError.http_code === 400 ? 400 : 502).json({
+          success: false,
+          message: 'Image upload failed. Please try again or provide a valid image URL.',
+        });
+      }
+    } else if (body.imageUrl && typeof body.imageUrl === 'string' && body.imageUrl.trim()) {
+      const trimmedUrl = body.imageUrl.trim();
+      const urlPattern = /^https?:\/\/.+/i;
+      const isLocalUpload = trimmedUrl.startsWith('/uploads/');
+      if (!urlPattern.test(trimmedUrl) && !isLocalUpload) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid image URL format. Please provide a valid HTTP/HTTPS URL.',
+        });
+      }
+      imageUrl = trimmedUrl;
     }
 
     if (!imageUrl) {
       return res.status(400).json({
         success: false,
-        message: 'A service image is required (either file upload or imageUrl).',
+        message: 'Please upload a service image or provide a valid image URL.',
       });
     }
 
@@ -138,17 +172,17 @@ export const createService = async (req, res, next) => {
     }
 
     const service = await Service.create({
-      title: body.title,
+      title: body.title.trim(),
       slug: uniqueSlug,
-      subtitle: body.subtitle || '',
-      description: body.description,
+      subtitle: body.subtitle ? body.subtitle.trim() : '',
+      description: body.description.trim(),
       features: Array.isArray(features) ? features : [],
       imageUrl,
       imagePublicId,
       displayOrder: Number(body.displayOrder) || 0,
       isActive: body.isActive !== undefined ? body.isActive === 'true' || body.isActive === true : true,
-      seoTitle: body.seoTitle || body.title,
-      seoDescription: body.seoDescription || body.subtitle || '',
+      seoTitle: body.seoTitle ? body.seoTitle.trim() : body.title.trim(),
+      seoDescription: body.seoDescription ? body.seoDescription.trim() : (body.subtitle ? body.subtitle.trim() : ''),
     });
 
     return res.status(201).json({
@@ -190,15 +224,51 @@ export const updateService = async (req, res, next) => {
 
     // Handle image replacement safely: upload new image before deleting old one
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/services');
-      body.imageUrl = uploadResult.secure_url;
-      body.imagePublicId = uploadResult.public_id;
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/services');
+        body.imageUrl = uploadResult.secure_url;
+        body.imagePublicId = uploadResult.public_id;
 
-      // Delete old image asynchronously without blocking response
-      if (oldPublicId) {
-        deleteFromCloudinary(oldPublicId).catch((err) =>
-          console.error('Failed to cleanup old service image:', err.message)
-        );
+        // Delete old image asynchronously only after successful new upload
+        if (oldPublicId) {
+          deleteFromCloudinary(oldPublicId).catch((err) =>
+            console.error('Failed to cleanup old service image:', err.message)
+          );
+        }
+      } catch (uploadError) {
+        console.error('❌ Service banner update upload error:', uploadError.message || uploadError);
+        return res.status(uploadError.http_code === 400 ? 400 : 502).json({
+          success: false,
+          message: 'Image upload failed. Please try again or provide a valid image URL.',
+        });
+      }
+    } else if (body.removeImage === 'true' || body.removeImage === true) {
+      // Removing image without providing a replacement is rejected
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a service image or provide a valid image URL.',
+      });
+    } else if (body.imageUrl !== undefined) {
+      if (body.imageUrl && typeof body.imageUrl === 'string' && body.imageUrl.trim()) {
+        const trimmedUrl = body.imageUrl.trim();
+        const urlPattern = /^https?:\/\/.+/i;
+        const isLocalUpload = trimmedUrl.startsWith('/uploads/');
+        if (!urlPattern.test(trimmedUrl) && !isLocalUpload) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid image URL format. Please provide a valid HTTP/HTTPS URL.',
+          });
+        }
+        body.imageUrl = trimmedUrl;
+      } else {
+        // If empty string passed, preserve existing imageUrl if present; if none, reject
+        if (!service.imageUrl) {
+          return res.status(400).json({
+            success: false,
+            message: 'Please upload a service image or provide a valid image URL.',
+          });
+        }
+        delete body.imageUrl;
       }
     }
 
