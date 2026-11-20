@@ -32,7 +32,7 @@ describe('Gallery API', () => {
     expect(resFilter.body.data[0].category).toBe('Residential');
   });
 
-  it('POST /api/gallery should create a gallery item with admin token', async () => {
+  it('POST /api/gallery should create a gallery item without category', async () => {
     const { token } = await createTestAdminAndToken();
 
     const res = await request(app)
@@ -40,7 +40,6 @@ describe('Gallery API', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         title: 'Agricultural Orchard Irrigation',
-        category: 'Agriculture',
         imageUrl: 'https://example.com/orchard.jpg',
         description: 'Large scale fruit tree drip network.',
       });

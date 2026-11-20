@@ -23,9 +23,8 @@ const gallerySchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
       trim: true,
-      index: true,
+      default: '',
     },
     displayOrder: {
       type: Number,
@@ -43,8 +42,8 @@ const gallerySchema = new mongoose.Schema(
   }
 );
 
-// Index for efficient sorting & category filtering
-gallerySchema.index({ category: 1, displayOrder: 1, createdAt: -1 });
+// Index for efficient sorting & pagination
+gallerySchema.index({ displayOrder: 1, createdAt: -1 });
 
 const Gallery = mongoose.models.Gallery || mongoose.model('Gallery', gallerySchema);
 
