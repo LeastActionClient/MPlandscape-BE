@@ -222,7 +222,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
     it('should reject enquiry with missing customer name', async () => {
       const res = await request(app).post('/api/enquiries').send({
         customerName: '',
-        phone: '+91 98765 43210',
+        phone: '8838548402',
         email: 'client@example.com',
         message: 'Looking for lawn care services.',
       });
@@ -234,7 +234,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
     it('should reject enquiry with invalid email format', async () => {
       const res = await request(app).post('/api/enquiries').send({
         customerName: 'Kishore',
-        phone: '+91 98765 43210',
+        phone: '8838548402',
         email: 'not-an-email',
         message: 'Inquiry details here.',
       });
@@ -245,7 +245,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
     it('should reject enquiry with message shorter than 5 characters', async () => {
       const res = await request(app).post('/api/enquiries').send({
         customerName: 'Kishore',
-        phone: '+91 98765 43210',
+        phone: '8838548402',
         email: 'client@example.com',
         message: 'Hi',
       });
@@ -256,7 +256,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
     it('should reject enquiry with non-existent service ID', async () => {
       const res = await request(app).post('/api/enquiries').send({
         customerName: 'Valid Client',
-        phone: '+91 98765 43210',
+        phone: '8838548402',
         email: 'client@example.com',
         serviceId: '507f1f77bcf86cd799439011',
         message: 'Looking for specific service consultation.',
@@ -269,7 +269,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
     it('should prevent duplicate enquiry submissions within 5 minutes', async () => {
       const enquiryPayload = {
         customerName: 'Double Clicker',
-        phone: '+91 98765 43210',
+        phone: '8838548402',
         email: 'duplicate@example.com',
         message: 'Identical enquiry message for duplicate testing.',
       };
@@ -288,7 +288,7 @@ describe('Phase 6 – Security & Edge Cases Suite', () => {
 
       const enquiry = await Enquiry.create({
         customerName: 'Test Customer',
-        phone: '+91 98765 43210',
+        phone: '+91 8838548402',
         email: 'test@example.com',
         message: 'Test message for status',
       });

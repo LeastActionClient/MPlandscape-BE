@@ -88,8 +88,8 @@ app.use(cors(corsOptions));
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // 4. Request Body Limits & Utilities
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(compression());
 

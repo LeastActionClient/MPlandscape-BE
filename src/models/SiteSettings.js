@@ -33,7 +33,7 @@ const siteSettingsSchema = new mongoose.Schema(
     },
     phoneNumbers: {
       type: [String],
-      default: ['+91 98765 43210', '+91 98765 43211'],
+      default: ['+91 8838548402', '+91 98765 43211'],
     },
     emailAddresses: {
       type: [String],
@@ -41,7 +41,7 @@ const siteSettingsSchema = new mongoose.Schema(
     },
     whatsappNumber: {
       type: String,
-      default: '+91 98765 43210',
+      default: '+91 8838548402',
     },
     address: {
       type: String,

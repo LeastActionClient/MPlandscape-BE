@@ -47,14 +47,94 @@ export const galleryCreateSchema = z.object({
 export const galleryUpdateSchema = galleryCreateSchema.partial();
 
 // Enquiry Schemas
-export const enquiryCreateSchema = z.object({
-  customerName: z.string().min(2, 'Customer name must be at least 2 characters').max(100).trim(),
-  phone: z.string().min(7, 'Please enter a valid phone number').max(20).trim(),
-  email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
-  serviceId: z.string().optional().nullable(),
-  location: z.string().max(200).trim().optional().default(''),
-  message: z.string().min(5, 'Message must be at least 5 characters').max(2000).trim(),
-});
+export const enquiryCreateSchema = z
+  .object({
+    customerName: z
+      .string({ required_error: 'Please enter a valid name using letters only.' })
+      .trim()
+      .refine((val) => val.length > 0, {
+        message: 'Please enter a valid name using letters only.',
+      })
+      .refine((val) => /^[a-zA-Z\s]+$/.test(val), {
+        message: 'Please enter a valid name using letters only.',
+      })
+      .refine((val) => val.trim().length >= 2, {
+        message: 'Please enter a valid name using letters only.',
+      })
+      .refine((val) => val.trim().length <= 60, {
+        message: 'Name cannot exceed 60 characters',
+      })
+      .transform((val) => val.trim().replace(/\s+/g, ' ')),
+
+    phone: z
+      .string({ required_error: 'Please enter a valid 10-digit mobile number.' })
+      .trim()
+      .refine((val) => /^[0-9]{10}$/.test(val), {
+        message: 'Please enter a valid 10-digit mobile number.',
+      })
+      .refine((val) => !/^(\d)\1{9}$/.test(val), {
+        message: 'Please enter a valid 10-digit mobile number.',
+      }),
+
+    email: z
+      .string({ required_error: 'Email address is required' })
+      .trim()
+      .toLowerCase()
+      .refine((val) => val.length > 0, {
+        message: 'Please enter a valid email address',
+      })
+      .refine((val) => !/\s/.test(val), {
+        message: 'Email address cannot contain spaces',
+      })
+      .refine((val) => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val), {
+        message: 'Please enter a valid email address (e.g. customer@example.com)',
+      }),
+
+    serviceId: z
+      .string()
+      .optional()
+      .nullable()
+      .refine((val) => !val || /^[0-9a-fA-F]{24}$/.test(val), {
+        message: 'Invalid service selected. The service ID format is invalid.',
+      }),
+
+    location: z
+      .string()
+      .trim()
+      .max(150, 'Project location cannot exceed 150 characters')
+      .optional()
+      .default('')
+      .refine((val) => !val || /^[\p{L}\p{M}\p{N}\s,.\-\/#&'()]+$/u.test(val), {
+        message: 'Location contains invalid characters',
+      })
+      .refine((val) => !val || /[\p{L}\p{M}\p{N}]/u.test(val), {
+        message: 'Please enter a valid location or address',
+      })
+      .refine((val) => !val || !/(.)\1{4,}/i.test(val), {
+        message: 'Please enter a valid location without repeated characters',
+      }),
+
+    message: z
+      .string({ required_error: 'Project details are required' })
+      .trim()
+      .min(10, 'Message must be at least 10 characters')
+      .max(1000, 'Project details cannot exceed 1,000 characters')
+      .refine((val) => !/(.)\1{4,}/i.test(val), {
+        message: 'Please provide a meaningful description without repeated characters',
+      })
+      .refine(
+        (val) => {
+          const unique = new Set(val.replace(/\s/g, '').split('')).size;
+          return unique >= 3;
+        },
+        {
+          message: 'Please provide meaningful project requirements',
+        }
+      ),
+
+    website_hp: z.string().optional().default(''),
+  })
+  .strict();
 
 export const enquiryStatusSchema = z.object({
   status: z.enum(ENQUIRY_STATUS, {
