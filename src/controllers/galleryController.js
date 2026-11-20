@@ -91,7 +91,7 @@ export const getGalleryItem = async (req, res, next) => {
 export const createGalleryItem = async (req, res, next) => {
   try {
     const body = { ...req.body };
-    const category = body.category || 'General';
+    const category = body.category || '';
     const title = body.title || 'Landscape Project Showcase';
     const description = body.description || '';
     const displayOrder = Number(body.displayOrder) || 0;
