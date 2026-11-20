@@ -155,6 +155,23 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Root endpoint - Service status & API overview
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'MP Landscape Services API Server is running.',
+    version: '1.0.0',
+    health: '/api/health',
+    endpoints: {
+      services: '/api/services',
+      gallery: '/api/gallery',
+      settings: '/api/settings',
+      enquiries: '/api/enquiries',
+      auth: '/api/auth',
+      dashboard: '/api/dashboard',
+    },
+  });
+});
 
 // 8. Mount Feature API Routes
 app.use('/api/auth', authRoutes);
