@@ -79,10 +79,20 @@ function saveBufferLocally(buffer, folder) {
 
 /**
  * Resilient image storage fallback:
- * 1. Tries saving to local filesystem if writable (local development)
- * 2. If filesystem is read-only (like Vercel serverless / AWS Lambda), stores as self-contained Base64 Data URI
+ * 1. If running in a serverless environment (Vercel / AWS Lambda), stores as self-contained Base64 Data URI
+ * 2. In local development, saves to local uploads directory and serves statically
+ * 3. Never throws an unhandled error or crashes with 502
  */
 function saveResiliently(buffer, folder) {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    const mime = getMimeTypeFromBuffer(buffer);
+    const dataUri = `data:${mime};base64,${buffer.toString('base64')}`;
+    return {
+      secure_url: dataUri,
+      public_id: `data_uri:${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+  }
+
   try {
     return saveBufferLocally(buffer, folder);
   } catch (fsErr) {

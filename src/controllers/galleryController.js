@@ -97,14 +97,22 @@ export const createGalleryItem = async (req, res, next) => {
     const displayOrder = Number(body.displayOrder) || 0;
     const isActive = body.isActive !== undefined ? body.isActive === 'true' || body.isActive === true : true;
 
-    // Handle multiple uploaded files
-    if (req.files && req.files.length > 0) {
+    // Normalize uploaded files from array, fields, or single file upload
+    const uploadedFiles = Array.isArray(req.files)
+      ? req.files
+      : req.files
+      ? [...(req.files.images || []), ...(req.files.image || [])]
+      : req.file
+      ? [req.file]
+      : [];
+
+    if (uploadedFiles.length > 0) {
       const createdItems = [];
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const file = uploadedFiles[i];
         try {
           const uploadResult = await uploadToCloudinary(file.buffer, 'mp_landscape/gallery');
-          const itemTitle = req.files.length === 1 ? title : `${title} - Part ${i + 1}`;
+          const itemTitle = uploadedFiles.length === 1 ? title : `${title} - Part ${i + 1}`;
 
           const item = await Gallery.create({
             title: itemTitle,
@@ -131,36 +139,8 @@ export const createGalleryItem = async (req, res, next) => {
       return res.status(201).json({
         success: true,
         message: `${createdItems.length} gallery items uploaded successfully`,
-        data: createdItems,
+        data: createdItems.length === 1 ? createdItems[0] : createdItems,
       });
-    }
-
-    // Handle single file upload
-    if (req.file) {
-      try {
-        const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/gallery');
-        const item = await Gallery.create({
-          title,
-          description,
-          category,
-          imageUrl: uploadResult.secure_url,
-          publicId: uploadResult.public_id,
-          displayOrder,
-          isActive,
-        });
-
-        return res.status(201).json({
-          success: true,
-          message: 'Gallery item created successfully',
-          data: item,
-        });
-      } catch (uploadError) {
-        console.error('❌ Failed to upload gallery image:', uploadError.message || uploadError);
-        return res.status(502).json({
-          success: false,
-          message: 'Image upload failed. Please try again or provide an image URL.',
-        });
-      }
     }
 
     // Handle raw imageUrl in JSON payload
