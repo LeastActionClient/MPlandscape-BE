@@ -102,19 +102,30 @@ export const createGalleryItem = async (req, res, next) => {
       const createdItems = [];
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
-        const uploadResult = await uploadToCloudinary(file.buffer, 'mp_landscape/gallery');
-        const itemTitle = req.files.length === 1 ? title : `${title} - Part ${i + 1}`;
+        try {
+          const uploadResult = await uploadToCloudinary(file.buffer, 'mp_landscape/gallery');
+          const itemTitle = req.files.length === 1 ? title : `${title} - Part ${i + 1}`;
 
-        const item = await Gallery.create({
-          title: itemTitle,
-          description,
-          category,
-          imageUrl: uploadResult.secure_url,
-          publicId: uploadResult.public_id,
-          displayOrder: displayOrder + i,
-          isActive,
+          const item = await Gallery.create({
+            title: itemTitle,
+            description,
+            category,
+            imageUrl: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            displayOrder: displayOrder + i,
+            isActive,
+          });
+          createdItems.push(item);
+        } catch (uploadError) {
+          console.error(`❌ Failed to upload gallery image ${i + 1}:`, uploadError.message || uploadError);
+        }
+      }
+
+      if (createdItems.length === 0) {
+        return res.status(502).json({
+          success: false,
+          message: 'Image upload failed. Please try again or provide an image URL.',
         });
-        createdItems.push(item);
       }
 
       return res.status(201).json({
@@ -126,22 +137,30 @@ export const createGalleryItem = async (req, res, next) => {
 
     // Handle single file upload
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/gallery');
-      const item = await Gallery.create({
-        title,
-        description,
-        category,
-        imageUrl: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        displayOrder,
-        isActive,
-      });
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/gallery');
+        const item = await Gallery.create({
+          title,
+          description,
+          category,
+          imageUrl: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+          displayOrder,
+          isActive,
+        });
 
-      return res.status(201).json({
-        success: true,
-        message: 'Gallery item created successfully',
-        data: item,
-      });
+        return res.status(201).json({
+          success: true,
+          message: 'Gallery item created successfully',
+          data: item,
+        });
+      } catch (uploadError) {
+        console.error('❌ Failed to upload gallery image:', uploadError.message || uploadError);
+        return res.status(502).json({
+          success: false,
+          message: 'Image upload failed. Please try again or provide an image URL.',
+        });
+      }
     }
 
     // Handle raw imageUrl in JSON payload

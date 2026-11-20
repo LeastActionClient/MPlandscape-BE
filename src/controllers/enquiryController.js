@@ -9,7 +9,15 @@ import Service from '../models/Service.js';
  */
 export const createEnquiry = async (req, res, next) => {
   try {
-    const { customerName, phone, email, serviceId, location, message } = req.body;
+    const { customerName, phone, email, serviceId, location, message, website_hp } = req.body;
+
+    // Bot detection via honeypot field
+    if (website_hp && typeof website_hp === 'string' && website_hp.trim().length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Spam submission detected.',
+      });
+    }
 
     let validServiceId = null;
     if (serviceId) {
@@ -19,7 +27,7 @@ export const createEnquiry = async (req, res, next) => {
           message: 'Invalid service selected. The service ID format is invalid.',
         });
       }
-      const serviceExists = await Service.findById(serviceId);
+      const serviceExists = await Service.findOne({ _id: serviceId, isActive: true });
       if (!serviceExists) {
         return res.status(400).json({
           success: false,
@@ -29,11 +37,17 @@ export const createEnquiry = async (req, res, next) => {
       validServiceId = serviceId;
     }
 
+    // HTML sanitization to prevent XSS / raw tags
+    const sanitize = (text) => (typeof text === 'string' ? text.replace(/<[^>]*>/g, '').trim() : '');
+    const cleanCustomerName = sanitize(customerName);
+    const cleanLocation = sanitize(location);
+    const cleanMessage = sanitize(message);
+
     // Edge Case: Check for duplicate enquiry submission within a 5-minute window
     const recentDuplicate = await Enquiry.findOne({
       email: email.toLowerCase(),
-      phone,
-      message,
+      phone: phone.trim(),
+      message: cleanMessage,
       createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
     });
 
@@ -45,12 +59,12 @@ export const createEnquiry = async (req, res, next) => {
     }
 
     const enquiry = await Enquiry.create({
-      customerName,
-      phone,
-      email,
+      customerName: cleanCustomerName,
+      phone: phone.trim(),
+      email: email.toLowerCase().trim(),
       serviceId: validServiceId,
-      location: location || '',
-      message,
+      location: cleanLocation || '',
+      message: cleanMessage,
       status: 'NEW',
       adminNotes: '',
     });
