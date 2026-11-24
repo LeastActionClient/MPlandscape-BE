@@ -234,7 +234,7 @@ app.use((err, req, res, next) => {
   if (err.name === 'MulterError') {
     statusCode = 400;
     if (err.code === 'LIMIT_FILE_SIZE') {
-      message = 'File size limit exceeded. Maximum allowed file size is 5MB.';
+      message = 'File size limit exceeded. Maximum allowed size is 15MB for images and 100MB for videos.';
     } else if (err.code === 'LIMIT_FILE_COUNT') {
       message = 'Too many files uploaded in a single batch (maximum 10 allowed).';
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {

@@ -84,7 +84,7 @@ export const getGalleryItem = async (req, res, next) => {
 };
 
 /**
- * @desc    Create one or multiple gallery items
+ * @desc    Create one or multiple gallery items (images or videos)
  * @route   POST /api/gallery
  * @access  Private (Admin)
  */
@@ -101,17 +101,52 @@ export const createGalleryItem = async (req, res, next) => {
     const uploadedFiles = Array.isArray(req.files)
       ? req.files
       : req.files
-      ? [...(req.files.images || []), ...(req.files.image || [])]
+      ? [
+          ...(req.files.media || []),
+          ...(req.files.images || []),
+          ...(req.files.image || []),
+          ...(req.files.videos || []),
+          ...(req.files.video || []),
+          ...(req.files.files || []),
+          ...(req.files.file || []),
+        ]
       : req.file
       ? [req.file]
       : [];
 
     if (uploadedFiles.length > 0) {
+      // Validate each file's size per media type
+      for (const file of uploadedFiles) {
+        const mime = (file.mimetype || '').toLowerCase();
+        const isVideo = mime.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.originalname || '');
+        if (isVideo && file.size > 100 * 1024 * 1024) {
+          return res.status(400).json({
+            success: false,
+            message: `Video file "${file.originalname}" exceeds the 100 MB limit.`,
+          });
+        }
+        if (!isVideo && file.size > 15 * 1024 * 1024) {
+          return res.status(400).json({
+            success: false,
+            message: `Image file "${file.originalname}" exceeds the 15 MB limit.`,
+          });
+        }
+      }
+
       const createdItems = [];
       for (let i = 0; i < uploadedFiles.length; i++) {
         const file = uploadedFiles[i];
+        const mime = (file.mimetype || '').toLowerCase();
+        const isVideo = mime.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.originalname || '');
+        const resourceType = isVideo ? 'video' : 'image';
+        const mediaType = isVideo ? 'VIDEO' : 'IMAGE';
+
         try {
-          const uploadResult = await uploadToCloudinary(file.buffer, 'mp_landscape/gallery');
+          const uploadResult = await uploadToCloudinary(file.buffer, 'mp_landscape/gallery', {
+            filename: file.originalname,
+            mimetype: file.mimetype,
+            resource_type: resourceType,
+          });
           const itemTitle = uploadedFiles.length === 1 ? title : `${title} - Part ${i + 1}`;
 
           const item = await Gallery.create({
@@ -119,20 +154,23 @@ export const createGalleryItem = async (req, res, next) => {
             description,
             category,
             imageUrl: uploadResult.secure_url,
-            publicId: uploadResult.public_id,
+            publicId: uploadResult.public_id || '',
+            mediaType,
+            resourceType: uploadResult.resource_type || resourceType,
+            format: uploadResult.format || '',
             displayOrder: displayOrder + i,
             isActive,
           });
           createdItems.push(item);
         } catch (uploadError) {
-          console.error(`❌ Failed to upload gallery image ${i + 1}:`, uploadError.message || uploadError);
+          console.error(`❌ Failed to upload gallery ${mediaType.toLowerCase()} ${i + 1}:`, uploadError.message || uploadError);
         }
       }
 
       if (createdItems.length === 0) {
         return res.status(502).json({
           success: false,
-          message: 'Image upload failed. Please try again or provide an image URL.',
+          message: 'Media upload failed. Please try again or check the selected files.',
         });
       }
 
@@ -143,14 +181,23 @@ export const createGalleryItem = async (req, res, next) => {
       });
     }
 
-    // Handle raw imageUrl in JSON payload
-    if (body.imageUrl) {
+    // Handle raw imageUrl or mediaUrl in JSON payload
+    if (body.imageUrl || body.mediaUrl) {
+      const mediaUrl = body.imageUrl || body.mediaUrl;
+      const isVideo = body.mediaType === 'VIDEO' || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(mediaUrl);
+      const mediaType = isVideo ? 'VIDEO' : (body.mediaType || 'IMAGE');
+      const resourceType = isVideo ? 'video' : (body.resourceType || 'image');
+
       const item = await Gallery.create({
         title,
         description,
         category,
-        imageUrl: body.imageUrl,
+        imageUrl: mediaUrl,
         publicId: body.publicId || '',
+        mediaType,
+        resourceType,
+        format: body.format || '',
+        videoThumbnail: body.videoThumbnail || '',
         displayOrder,
         isActive,
       });
@@ -164,7 +211,7 @@ export const createGalleryItem = async (req, res, next) => {
 
     return res.status(400).json({
       success: false,
-      message: 'Please provide at least one image file or an imageUrl.',
+      message: 'Please provide at least one image or video file, or an imageUrl.',
     });
   } catch (error) {
     next(error);
@@ -172,7 +219,7 @@ export const createGalleryItem = async (req, res, next) => {
 };
 
 /**
- * @desc    Update gallery item details or image
+ * @desc    Update gallery item details or replace media
  * @route   PUT /api/gallery/:id
  * @access  Private (Admin)
  */
@@ -198,16 +245,52 @@ export const updateGalleryItem = async (req, res, next) => {
 
     const body = { ...req.body };
     const oldPublicId = item.publicId;
+    const oldResourceType = item.resourceType || item.mediaType || 'image';
 
-    // When replacing image: upload new image successfully before deleting the old one
-    if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer, 'mp_landscape/gallery');
+    const uploadedFile =
+      req.file ||
+      (req.files && (
+        req.files.media?.[0] ||
+        req.files.image?.[0] ||
+        req.files.video?.[0] ||
+        req.files.file?.[0]
+      ));
+
+    // When replacing media: upload new media successfully before deleting the old one
+    if (uploadedFile) {
+      const mime = (uploadedFile.mimetype || '').toLowerCase();
+      const isVideo = mime.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(uploadedFile.originalname || '');
+      if (isVideo && uploadedFile.size > 100 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: `Video file "${uploadedFile.originalname}" exceeds the 100 MB limit.`,
+        });
+      }
+      if (!isVideo && uploadedFile.size > 15 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: `Image file "${uploadedFile.originalname}" exceeds the 15 MB limit.`,
+        });
+      }
+
+      const resourceType = isVideo ? 'video' : 'image';
+      const mediaType = isVideo ? 'VIDEO' : 'IMAGE';
+
+      const uploadResult = await uploadToCloudinary(uploadedFile.buffer, 'mp_landscape/gallery', {
+        filename: uploadedFile.originalname,
+        mimetype: uploadedFile.mimetype,
+        resource_type: resourceType,
+      });
+
       body.imageUrl = uploadResult.secure_url;
-      body.publicId = uploadResult.public_id;
+      body.publicId = uploadResult.public_id || '';
+      body.mediaType = mediaType;
+      body.resourceType = uploadResult.resource_type || resourceType;
+      body.format = uploadResult.format || '';
 
       if (oldPublicId) {
-        deleteFromCloudinary(oldPublicId).catch((err) =>
-          console.error('Failed to cleanup old gallery image:', err.message)
+        deleteFromCloudinary(oldPublicId, oldResourceType).catch((err) =>
+          console.error('Failed to cleanup old gallery media:', err.message)
         );
       }
     }
@@ -260,9 +343,8 @@ export const deleteGalleryItem = async (req, res, next) => {
       });
     }
 
-
     if (item.publicId) {
-      await deleteFromCloudinary(item.publicId);
+      await deleteFromCloudinary(item.publicId, item.resourceType || item.mediaType || 'image');
     }
 
     await Gallery.findByIdAndDelete(id);
