@@ -40,6 +40,10 @@ export const galleryCreateSchema = z.object({
   description: z.string().trim().optional().default(''),
   category: z.string().min(2, 'Category is required').trim(),
   imageUrl: z.string().optional(),
+  mediaType: z.enum(['IMAGE', 'VIDEO']).optional().default('IMAGE'),
+  resourceType: z.string().optional().default('image'),
+  format: z.string().optional().default(''),
+  videoThumbnail: z.string().optional().default(''),
   displayOrder: z.preprocess((val) => (val !== undefined ? Number(val) : 0), z.number().int()).default(0),
   isActive: z.preprocess((val) => (val === 'false' || val === false ? false : true), z.boolean()).default(true),
 });

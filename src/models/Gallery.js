@@ -15,9 +15,27 @@ const gallerySchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      required: [true, 'Image URL is required'],
+      required: [true, 'Media URL is required'],
     },
     publicId: {
+      type: String,
+      default: '',
+    },
+    mediaType: {
+      type: String,
+      enum: ['IMAGE', 'VIDEO'],
+      default: 'IMAGE',
+      index: true,
+    },
+    resourceType: {
+      type: String,
+      default: 'image',
+    },
+    format: {
+      type: String,
+      default: '',
+    },
+    videoThumbnail: {
       type: String,
       default: '',
     },
@@ -39,8 +57,15 @@ const gallerySchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Virtual field for mediaUrl aliased to imageUrl for cleaner API semantics
+gallerySchema.virtual('mediaUrl').get(function () {
+  return this.imageUrl;
+});
 
 // Index for efficient sorting & pagination
 gallerySchema.index({ displayOrder: 1, createdAt: -1 });
