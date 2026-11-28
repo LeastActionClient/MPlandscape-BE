@@ -84,4 +84,84 @@ describe('Gallery API', () => {
     const check = await Gallery.findById(item._id);
     expect(check).toBeNull();
   });
+
+  it('GET /api/gallery?category=Outdoor Landscaping should match mapped categories like Residential', async () => {
+    await Gallery.create({
+      title: 'Residential Villa Lawn',
+      category: 'Residential',
+      imageUrl: 'https://example.com/res_mapped.jpg',
+      isActive: true,
+    });
+    await Gallery.create({
+      title: 'Indoor Office Atrium',
+      category: 'Indoor',
+      imageUrl: 'https://example.com/indoor_mapped.jpg',
+      isActive: true,
+    });
+
+    const res = await request(app).get('/api/gallery?category=Outdoor Landscaping');
+    expect(res.status).toBe(200);
+    const titles = res.body.data.map((i) => i.title);
+    expect(titles).toContain('Residential Villa Lawn');
+    expect(titles).not.toContain('Indoor Office Atrium');
+  });
+
+  it('POST /api/gallery should succeed without title, description, or category (simplified admin upload)', async () => {
+    const { token } = await createTestAdminAndToken();
+
+    const res = await request(app)
+      .post('/api/gallery')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        imageUrl: 'https://example.com/simple_upload.jpg',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe('Landscape Project');
+    expect(res.body.data.category).toBe('Outdoor Landscaping');
+  });
+
+  it('POST /api/gallery should save title, displayOrder, description, and isActive', async () => {
+    const { token } = await createTestAdminAndToken();
+
+    const res = await request(app)
+      .post('/api/gallery')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Indoor Office Landscape Installation',
+        displayOrder: 5,
+        description: 'Bespoke biophilic interior greenery installation.',
+        isActive: true,
+        imageUrl: 'https://example.com/indoor_office.jpg',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe('Indoor Office Landscape Installation');
+    expect(res.body.data.displayOrder).toBe(5);
+    expect(res.body.data.description).toBe('Bespoke biophilic interior greenery installation.');
+    expect(res.body.data.isActive).toBe(true);
+  });
+
+  it('POST /api/gallery should handle video upload with video mediaType', async () => {
+    const { token } = await createTestAdminAndToken();
+
+    const res = await request(app)
+      .post('/api/gallery')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Lawn Walkthrough Video Tour',
+        displayOrder: 2,
+        description: 'Drone and ground video footage.',
+        isActive: true,
+        mediaType: 'VIDEO',
+        imageUrl: 'https://example.com/walkthrough.mp4',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.mediaType).toBe('VIDEO');
+    expect(res.body.data.resourceType).toBe('video');
+  });
 });
+

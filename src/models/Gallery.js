@@ -4,7 +4,8 @@ const gallerySchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, 'Gallery item title is required'],
+      required: false,
+      default: 'Landscape Project',
       trim: true,
       maxlength: [150, 'Title cannot exceed 150 characters'],
     },
