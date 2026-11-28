@@ -21,8 +21,67 @@ export const getGallery = async (req, res, next) => {
       filter.isActive = req.query.isActive === 'true';
     }
 
-    if (req.query.category && req.query.category !== 'All') {
-      filter.category = req.query.category;
+    const CATEGORY_MAPPINGS = {
+      'Indoor Landscaping': [
+        'Indoor Landscaping',
+        'Indoor',
+        'Commercial',
+        'Biophilic',
+      ],
+      'Outdoor Landscaping': [
+        'Outdoor Landscaping',
+        'Landscape Design',
+        'Landscape Architecture',
+        'Garden Maintenance',
+        'Irrigation Systems',
+        'Residential',
+        'Outdoor',
+      ],
+      'Playground & Recreation': [
+        'Playground & Recreation',
+        'Playground',
+        'Recreation',
+      ],
+      'Plantation & Nursery': [
+        'Plantation & Nursery',
+        'Plant Supply & Nursery',
+        'Plant Trading',
+        'Agriculture & Farm Development',
+        'Horticulture',
+        'Plantation',
+        'Nursery',
+      ],
+    };
+
+    if (
+      req.query.category &&
+      req.query.category !== 'All' &&
+      req.query.category !== 'All Projects'
+    ) {
+      const cat = req.query.category;
+      if (cat === 'Indoor Landscaping') {
+        filter.$or = [
+          { category: { $in: ['Indoor Landscaping', 'Indoor', 'Commercial', 'Biophilic'] } },
+          { title: { $regex: /indoor|interior|office|atrium/i } },
+        ];
+      } else if (cat === 'Outdoor Landscaping') {
+        filter.$or = [
+          { category: { $in: ['Outdoor Landscaping', 'Landscape Design', 'Landscape Architecture', 'Garden Maintenance', 'Irrigation Systems', 'Residential', 'Outdoor'] } },
+          { title: { $regex: /outdoor|garden|lawn|pathway|walkway|stone|residential|boundary/i } },
+        ];
+      } else if (cat === 'Playground & Recreation') {
+        filter.$or = [
+          { category: { $in: ['Playground & Recreation', 'Playground', 'Recreation'] } },
+          { title: { $regex: /playground|recreation|swing|park/i } },
+        ];
+      } else if (cat === 'Plantation & Nursery') {
+        filter.$or = [
+          { category: { $in: ['Plantation & Nursery', 'Plant Supply & Nursery', 'Plant Trading', 'Agriculture & Farm Development', 'Horticulture', 'Plantation', 'Nursery'] } },
+          { title: { $regex: /nursery|plantation|bonsai|topiary|foliage|plant supply/i } },
+        ];
+      } else {
+        filter.category = cat;
+      }
     }
 
     const total = await Gallery.countDocuments(filter);
@@ -91,11 +150,25 @@ export const getGalleryItem = async (req, res, next) => {
 export const createGalleryItem = async (req, res, next) => {
   try {
     const body = { ...req.body };
-    const category = body.category || '';
-    const title = body.title || 'Landscape Project Showcase';
+    const category = body.category || 'Outdoor Landscaping';
+    const baseTitle = body.title?.trim() || '';
     const description = body.description || '';
     const displayOrder = Number(body.displayOrder) || 0;
     const isActive = body.isActive !== undefined ? body.isActive === 'true' || body.isActive === true : true;
+
+    const formatTitleFromFileName = (originalName) => {
+      if (!originalName) return 'Landscape Project';
+      const clean = originalName
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]+/g, ' ')
+        .trim();
+      if (!clean) return 'Landscape Project';
+      return clean
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    };
 
     // Normalize uploaded files from array, fields, or single file upload
     const uploadedFiles = Array.isArray(req.files)
@@ -147,7 +220,12 @@ export const createGalleryItem = async (req, res, next) => {
             mimetype: file.mimetype,
             resource_type: resourceType,
           });
-          const itemTitle = uploadedFiles.length === 1 ? title : `${title} - Part ${i + 1}`;
+          let itemTitle = baseTitle;
+          if (!itemTitle) {
+            itemTitle = formatTitleFromFileName(file.originalname);
+          } else if (uploadedFiles.length > 1) {
+            itemTitle = `${baseTitle} - Part ${i + 1}`;
+          }
 
           const item = await Gallery.create({
             title: itemTitle,
@@ -189,7 +267,7 @@ export const createGalleryItem = async (req, res, next) => {
       const resourceType = isVideo ? 'video' : (body.resourceType || 'image');
 
       const item = await Gallery.create({
-        title,
+        title: baseTitle || 'Landscape Project',
         description,
         category,
         imageUrl: mediaUrl,

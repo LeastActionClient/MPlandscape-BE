@@ -36,9 +36,9 @@ export const serviceUpdateSchema = serviceCreateSchema.partial();
 
 // Gallery Schemas
 export const galleryCreateSchema = z.object({
-  title: z.string().min(2, 'Title must be at least 2 characters').max(150).trim(),
+  title: z.string().max(150).trim().optional().default('Landscape Project'),
   description: z.string().trim().optional().default(''),
-  category: z.string().min(2, 'Category is required').trim(),
+  category: z.string().trim().optional().default('Outdoor Landscaping'),
   imageUrl: z.string().optional(),
   mediaType: z.enum(['IMAGE', 'VIDEO']).optional().default('IMAGE'),
   resourceType: z.string().optional().default('image'),

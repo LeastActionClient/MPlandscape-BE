@@ -150,6 +150,71 @@ export const initialServices = [
 ];
 
 export const initialGallery = [
+  // Signature Reference Projects
+  {
+    title: 'Specimen Bonsai & Topiary Nursery',
+    category: 'Plantation & Nursery',
+    description: 'Sculpted ornamental bonsai tree collection in professional nursery plantation.',
+    imageUrl: '/gallery/gallery_bonsai_nursery.jpg',
+    displayOrder: 1,
+    isActive: true,
+  },
+  {
+    title: "Recreational Park & Children's Lawn Swings",
+    category: 'Playground & Recreation',
+    description: "Vibrant outdoor children's swings and recreational play structure installed on manicured turf.",
+    imageUrl: '/gallery/gallery_playground_swings.jpg',
+    displayOrder: 2,
+    isActive: true,
+  },
+  {
+    title: 'Biophilic Corporate Reception Lounge',
+    category: 'Indoor Landscaping',
+    description: 'Architectural indoor planters integrated with contemporary seating and wooden slat canopy.',
+    imageUrl: '/gallery/gallery_indoor_lobby_lounge.jpg',
+    displayOrder: 3,
+    isActive: true,
+  },
+  {
+    title: 'Agshealth Living Architectural Green Wall',
+    category: 'Indoor Landscaping',
+    description: 'High-density vertical green wall installation with integrated illumination and corporate signage.',
+    imageUrl: '/gallery/gallery_vertical_green_wall.jpg',
+    displayOrder: 4,
+    isActive: true,
+  },
+  {
+    title: 'Halo-Illuminated Atrium Planter Pillar',
+    category: 'Indoor Landscaping',
+    description: 'Circular architectural planter enclosing interior column with halo lighting fixture.',
+    imageUrl: '/gallery/gallery_halo_planter_column.jpg',
+    displayOrder: 5,
+    isActive: true,
+  },
+  {
+    title: 'Playground & Recreation Turf Groundwork',
+    category: 'Playground & Recreation',
+    description: 'Multi-station community playground groundwork with safe play surfacing and play structures.',
+    imageUrl: '/gallery/gallery_playground_construction.jpg',
+    displayOrder: 6,
+    isActive: true,
+  },
+  {
+    title: 'Executive Suite Potted Living Palm',
+    category: 'Indoor Landscaping',
+    description: 'Modern statement planter with acclimatized indoor foliage beside commercial glazed entrance.',
+    imageUrl: '/gallery/gallery_entrance_biophilic_pot.jpg',
+    displayOrder: 7,
+    isActive: true,
+  },
+  {
+    title: 'Corporate Planter Credenza Installation',
+    category: 'Indoor Landscaping',
+    description: 'Built-in linear cabinet top greenery arrangements improving indoor air quality in open office.',
+    imageUrl: '/gallery/gallery_office_planters.jpg',
+    displayOrder: 8,
+    isActive: true,
+  },
   // Landscape Design
   {
     title: 'Luxury Villa Infinity Lawn & Terrace',
